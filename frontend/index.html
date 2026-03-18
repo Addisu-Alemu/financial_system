@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loan Portfolio — Status Report</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #f0f2f5;
+        color: #1a1a2e;
+      }
+
+      /* ── Header ── */
+      .header {
+        background: linear-gradient(135deg, #1a1a4e 0%, #2d2d7a 100%);
+        color: white;
+        padding: 24px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+      }
+      .header h1 {
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .header p {
+        font-size: 13px;
+        opacity: 0.7;
+        margin-top: 4px;
+      }
+      .report-date {
+        font-size: 12px;
+        opacity: 0.8;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 20px;
+      }
+      .api-status {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 600;
+        margin-left: 10px;
+      }
+      .api-online {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .api-offline {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      /* ── Summary cards ── */
+      .summary-cards {
+        display: flex;
+        gap: 16px;
+        padding: 24px 32px 8px;
+        flex-wrap: wrap;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 18px 24px;
+        flex: 1;
+        min-width: 150px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid #2d2d7a;
+      }
+      .card.green {
+        border-left-color: #10b981;
+      }
+      .card.red {
+        border-left-color: #ef4444;
+      }
+      .card.orange {
+        border-left-color: #f59e0b;
+      }
+      .card.purple {
+        border-left-color: #8b5cf6;
+      }
+      .card label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+      }
+      .card .value {
+        font-size: 28px;
+        font-weight: 800;
+        margin-top: 4px;
+        color: #1a1a4e;
+      }
+      .card .sub {
+        font-size: 12px;
+        color: #888;
+        margin-top: 2px;
+      }
+
+      /* ── Controls ── */
+      .controls {
+        padding: 14px 32px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .controls input {
+        flex: 1;
+        min-width: 220px;
+        padding: 9px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .controls input:focus {
+        border-color: #2d2d7a;
+      }
+      .filter-btn {
+        padding: 9px 18px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.15s;
+      }
+      .all-btn {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+      .all-btn.active {
+        background: #475569;
+        color: white;
+        border-color: #475569;
+      }
+      .arrears-btn {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+      }
+      .arrears-btn.active {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+      }
+      .ok-btn {
+        background: #f0fdf4;
+        color: #16a34a;
+        border: 1px solid #bbf7d0;
+      }
+      .ok-btn.active {
+        background: #16a34a;
+        color: white;
+        border-color: #16a34a;
+      }
+      .count-label {
+        color: #6b7280;
+        font-size: 13px;
+        margin-left: auto;
+      }
+      .refresh-btn {
+        padding: 9px 14px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        cursor: pointer;
+        font-size: 13px;
+        color: #475569;
+        transition: all 0.15s;
+      }
+      .refresh-btn:hover {
+        background: #f8fafc;
+      }
+
+      /* ── Table ── */
+      .table-container {
+        padding: 16px 32px 32px;
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      thead th {
+        background: #1a1a4e;
+        color: white;
+        padding: 13px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-align: left;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+      }
+      thead th:hover {
+        background: #2d2d7a;
+      }
+      tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.12s;
+      }
+      tbody tr:hover {
+        background: #f8f9ff;
+      }
+      tbody td {
+        padding: 11px 14px;
+        font-size: 13px;
+        vertical-align: middle;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .status-active {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .status-arrears {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .days-critical {
+        color: #dc2626;
+        font-weight: 700;
+      }
+      .days-high {
+        color: #d97706;
+        font-weight: 700;
+      }
+      .days-medium {
+        color: #2563eb;
+        font-weight: 700;
+      }
+      .days-low {
+        color: #16a34a;
+        font-weight: 700;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 60px;
+        color: #9ca3af;
+        font-size: 15px;
+      }
+      .error-msg {
+        text-align: center;
+        padding: 48px;
+        color: #dc2626;
+        font-size: 14px;
+      }
+      .no-results {
+        text-align: center;
+        padding: 48px;
+        color: #9ca3af;
+        font-size: 15px;
+      }
+      .sort-arrow {
+        margin-left: 4px;
+        opacity: 0.6;
+        font-size: 10px;
+      }
+
+      .skeleton {
+        background: #e5e7eb;
+        border-radius: 4px;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* ── Export dropdown ── */
+      .export-wrapper { position: relative; display: inline-block; }
+      .export-btn {
+        padding: 9px 16px; border-radius: 8px; border: 1px solid #2d2d7a;
+        background: #2d2d7a; color: white; cursor: pointer;
+        font-size: 13px; font-weight: 600;
+      }
+      .export-btn:hover { background: #1a1a4e; }
+      .export-dropdown {
+        display: none; position: absolute; top: calc(100% + 6px); right: 0;
+        background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100;
+        min-width: 210px; overflow: hidden;
+      }
+      .export-dropdown.open { display: block; }
+      .export-option {
+        padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: 500;
+        display: flex; align-items: center; gap: 10px; color: #374151;
+        border: none; background: none; width: 100%; text-align: left;
+      }
+      .export-option:hover { background: #f8f9ff; }
+      .export-divider { border: none; border-top: 1px solid #f1f5f9; margin: 0; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  </head>
+  <body>
+    <!-- ══ Header ══ -->
+    <div class="header">
+      <div>
+        <h1>📊 Loan Portfolio Status Report</h1>
+        <p>
+          Live data from database &mdash; customer payment status &amp; arrears
+          tracking
+        </p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span class="api-status" id="apiStatus">connecting…</span>
+        <div class="report-date" id="reportDate">—</div>
+      </div>
+    </div>
+
+    <!-- ══ Summary Cards ══ -->
+    <div class="summary-cards">
+      <div class="card">
+        <label>Total Customers</label>
+        <div class="value" id="cardTotal">—</div>
+        <div class="sub">in portfolio</div>
+      </div>
+      <div class="card green">
+        <label>Active</label>
+        <div class="value" id="cardActive">—</div>
+        <div class="sub">on schedule</div>
+      </div>
+      <div class="card red">
+        <label>In Arrears</label>
+        <div class="value" id="cardArrears">—</div>
+        <div class="sub">overdue payments</div>
+      </div>
+      <div class="card orange">
+        <label>Arrears Rate</label>
+        <div class="value" id="cardRate">—</div>
+        <div class="sub">of portfolio</div>
+      </div>
+      <div class="card purple">
+        <label>Avg Days Overdue</label>
+        <div class="value" id="cardAvgDays">—</div>
+        <div class="sub">among arrears</div>
+      </div>
+    </div>
+
+    <!-- ══ Controls ══ -->
+    <div class="controls">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="🔍  Search by name, account, or phone…"
+        oninput="debounceSearch()"
+      />
+      <button
+        class="filter-btn all-btn active"
+        id="btnAll"
+        onclick="setFilter('all')"
+      >
+        All
+      </button>
+      <button
+        class="filter-btn arrears-btn"
+        id="btnArrears"
+        onclick="setFilter('ARREARS')"
+      >
+        Arrears Only
+      </button>
+      <button
+        class="filter-btn ok-btn"
+        id="btnActive"
+        onclick="setFilter('ACTIVE')"
+      >
+        Active Only
+      </button>
+      <button
+        class="refresh-btn"
+        onclick="loadAll()"
+        title="Refresh data from database"
+      >
+        🔄 Refresh
+      </button>
+      <span class="count-label" id="countLabel"></span>
+      <div class="export-wrapper" id="exportWrapper">
+        <button class="export-btn" onclick="toggleExportMenu()">&#8595; Export &#9662;</button>
+        <div class="export-dropdown" id="exportDropdown">
+          <button class="export-option" onclick="exportExcel()">&#128202; &nbsp;Download as Excel (.xlsx)</button>
+          <hr class="export-divider">
+          <button class="export-option" onclick="exportPDF()">&#128196; &nbsp;Download as PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Table ══ -->
+    <div class="table-container">
+      <table id="reportTable">
+        <thead>
+          <tr>
+            <th onclick="toggleSort('full_name')">
+              Customer Name <span class="sort-arrow" id="sort_full_name"></span>
+            </th>
+            <th onclick="toggleSort('account_key')">
+              Account No <span class="sort-arrow" id="sort_account_key"></span>
+            </th>
+            <th>Phone</th>
+            <th onclick="toggleSort('disbursement_date')">
+              Loan Date
+              <span class="sort-arrow" id="sort_disbursement_date"></span>
+            </th>
+            <th onclick="toggleSort('loan_amount')" style="text-align: right">
+              Loan Amount (ETB)
+              <span class="sort-arrow" id="sort_loan_amount"></span>
+            </th>
+            <th onclick="toggleSort('status')">
+              Status <span class="sort-arrow" id="sort_status"></span>
+            </th>
+            <th onclick="toggleSort('days_overdue')">
+              Days Overdue
+              <span class="sort-arrow" id="sort_days_overdue">▼</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="7" class="loading">⏳ Connecting to database…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <script>
+      // ── Config ──────────────────────────────────────────
+      // Change this URL when you deploy to a server
+      const API_BASE = "";  // nginx proxies /api/ to backend
+
+      // ── State ───────────────────────────────────────────
+      let currentFilter = "all";
+      let currentSort = { col: "days_overdue", dir: "desc" };
+      let searchTimer = null;
+
+      // ── Boot ────────────────────────────────────────────
+      window.onload = () => {
+        document.getElementById("reportDate").textContent =
+          new Date().toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          });
+        loadAll();
+      };
+
+      async function loadAll() {
+        await Promise.all([loadSummary(), loadCustomers()]);
+      }
+
+      // ── Summary ─────────────────────────────────────────
+      async function loadSummary() {
+        try {
+          const res = await fetch(`${API_BASE}/api/summary`);
+          if (!res.ok) throw new Error();
+          const d = await res.json();
+          document.getElementById("cardTotal").textContent =
+            d.total.toLocaleString();
+          document.getElementById("cardActive").textContent =
+            d.active.toLocaleString();
+          document.getElementById("cardArrears").textContent =
+            d.arrears.toLocaleString();
+          document.getElementById("cardRate").textContent =
+            d.arrears_rate + "%";
+          document.getElementById("cardAvgDays").textContent =
+            d.avg_days_overdue.toLocaleString();
+          setApiStatus(true);
+        } catch {
+          setApiStatus(false);
+        }
+      }
+
+      function setApiStatus(online) {
+        const el = document.getElementById("apiStatus");
+        el.textContent = online ? "● Live" : "● Offline";
+        el.className = "api-status " + (online ? "api-online" : "api-offline");
+      }
+
+      // ── Customers ────────────────────────────────────────
+      async function loadCustomers() {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML =
+          '<tr><td colspan="7" class="loading">Loading…</td></tr>';
+
+        const params = new URLSearchParams();
+        const q = document.getElementById("searchInput").value.trim();
+        if (q) params.set("search", q);
+        if (currentFilter !== "all") params.set("status", currentFilter);
+        params.set("sort_by", currentSort.col);
+        params.set("sort_dir", currentSort.dir);
+
+        try {
+          const res = await fetch(`${API_BASE}/api/customers?${params}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          renderTable(data.customers);
+          document.getElementById("countLabel").textContent =
+            `${data.total} customer${data.total !== 1 ? "s" : ""}`;
+          setApiStatus(true);
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="7" class="error-msg">
+        ⚠️ Could not connect to the API at <strong>${API_BASE}</strong>.<br>
+        Make sure the backend is running: <code>uvicorn main:app --reload</code>
+      </td></tr>`;
+          setApiStatus(false);
+        }
+      }
+
+      // ── Render ───────────────────────────────────────────
+      function renderTable(rows) {
+        const tbody = document.getElementById("tableBody");
+        if (!rows.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="7" class="no-results">No matching customers found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows
+          .map((d) => {
+            const sc =
+              d.status === "ACTIVE" ? "status-active" : "status-arrears";
+            const dc = daysClass(d.days_overdue);
+            const daysHtml =
+              d.status === "ACTIVE"
+                ? '<span style="color:#9ca3af">—</span>'
+                : `<span class="${dc}">${d.days_overdue} days</span>`;
+            return `<tr>
+        <td><strong>${esc(d.full_name)}</strong></td>
+        <td style="font-family:monospace;font-size:12px;color:#6b7280">${esc(d.account_key)}</td>
+        <td>${esc(d.phone || "—")}</td>
+        <td>${d.disbursement_date || "—"}</td>
+        <td style="text-align:right">${Number(d.loan_amount).toLocaleString()}</td>
+        <td><span class="status-badge ${sc}">${d.status}</span></td>
+        <td>${daysHtml}</td>
+      </tr>`;
+          })
+          .join("");
+      }
+
+      function daysClass(days) {
+        if (!days) return "";
+        if (days > 365) return "days-critical";
+        if (days > 180) return "days-high";
+        if (days > 60) return "days-medium";
+        return "days-low";
+      }
+
+      function esc(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      // ── Filter & Sort ────────────────────────────────────
+      function setFilter(f) {
+        currentFilter = f;
+        document
+          .getElementById("btnAll")
+          .classList.toggle("active", f === "all");
+        document
+          .getElementById("btnArrears")
+          .classList.toggle("active", f === "ARREARS");
+        document
+          .getElementById("btnActive")
+          .classList.toggle("active", f === "ACTIVE");
+        loadCustomers();
+      }
+
+      function toggleSort(col) {
+        if (currentSort.col === col) {
+          currentSort.dir = currentSort.dir === "desc" ? "asc" : "desc";
+        } else {
+          currentSort.col = col;
+          currentSort.dir =
+            col === "days_overdue" || col === "loan_amount" ? "desc" : "asc";
+        }
+        // Update arrows
+        document
+          .querySelectorAll(".sort-arrow")
+          .forEach((el) => (el.textContent = ""));
+        const arrow = document.getElementById(`sort_${col}`);
+        if (arrow) arrow.textContent = currentSort.dir === "desc" ? " ▼" : " ▲";
+        loadCustomers();
+      }
+
+      function debounceSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadCustomers, 350);
+      }
+
+      // ── Export helpers ───────────────────────────────────
+      function toggleExportMenu() {
+        document.getElementById("exportDropdown").classList.toggle("open");
+      }
+
+      document.addEventListener("click", function(e) {
+        var wrapper = document.getElementById("exportWrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+          document.getElementById("exportDropdown").classList.remove("open");
+        }
+      });
+
+      function fetchCurrentData() {
+        const params = new URLSearchParams();
+        const q = document.getElementById("searchInput").value.trim();
+        if (q) params.set("search", q);
+        if (currentFilter !== "all") params.set("status", currentFilter);
+        params.set("sort_by", currentSort.col);
+        params.set("sort_dir", currentSort.dir);
+        return fetch(API_BASE + "/api/customers?" + params.toString())
+          .then(function(r) { return r.json(); });
+      }
+
+      // ── Export Excel ─────────────────────────────────────
+      async function exportExcel() {
+        document.getElementById("exportDropdown").classList.remove("open");
+        const [cusData, summary] = await Promise.all([
+          fetchCurrentData(),
+          fetch(API_BASE + "/api/summary").then(function(r) { return r.json(); })
+        ]);
+        const rows = cusData.customers;
+
+        const wsData = [
+          ["Loan Portfolio Status Report"],
+          ["Generated: " + new Date().toLocaleString("en-GB")],
+          ["Filter: " + (currentFilter === "all" ? "All Customers" : currentFilter)],
+          [],
+          ["#","Customer Name","Account No","Phone","Loan Date","Loan Amount (ETB)","Modality","Payments","Status","Days Overdue","First Overdue Date"]
+        ];
+        rows.forEach(function(d, i) {
+          wsData.push([
+            i + 1, d.full_name, d.account_key, d.phone || "",
+            d.disbursement_date || "", Number(d.loan_amount),
+            d.modality, d.num_payments, d.status,
+            d.days_overdue || 0, d.first_overdue_date || ""
+          ]);
+        });
+
+        const sumData = [
+          ["Summary"], [],
+          ["Total Customers",    summary.total],
+          ["Active",             summary.active],
+          ["In Arrears",         summary.arrears],
+          ["Arrears Rate",       summary.arrears_rate + "%"],
+          ["Avg Days Overdue",   summary.avg_days_overdue],
+          ["Total Portfolio (ETB)", summary.total_portfolio]
+        ];
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws["!cols"] = [{wch:4},{wch:32},{wch:28},{wch:16},{wch:14},{wch:20},{wch:12},{wch:10},{wch:10},{wch:14},{wch:18}];
+        ws["!merges"] = [{ s:{r:0,c:0}, e:{r:0,c:10} }];
+        XLSX.utils.book_append_sheet(wb, ws, "Loan Status");
+
+        const wsSummary = XLSX.utils.aoa_to_sheet(sumData);
+        wsSummary["!cols"] = [{wch:24},{wch:16}];
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+        XLSX.writeFile(wb, "loan_report_" + new Date().toISOString().slice(0,10) + ".xlsx");
+      }
+
+      // ── Export PDF ───────────────────────────────────────
+      async function exportPDF() {
+        document.getElementById("exportDropdown").classList.remove("open");
+        const filterLabel = currentFilter === "all" ? "All Customers" : currentFilter;
+        const date = new Date().toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"});
+
+        const [cusData, summary] = await Promise.all([
+          fetchCurrentData(),
+          fetch(API_BASE + "/api/summary").then(function(r) { return r.json(); })
+        ]);
+        const rows = cusData.customers;
+
+        let rowsHtml = "";
+        rows.forEach(function(d, i) {
+          const dc = d.days_overdue > 365 ? "days-critical"
+                   : d.days_overdue > 180 ? "days-high"
+                   : d.days_overdue > 60  ? "days-medium" : "days-low";
+          const daysCell = d.status === "ACTIVE"
+            ? "&mdash;"
+            : '<span class="' + dc + '">' + d.days_overdue + " days</span>";
+          const badgeCls = d.status === "ACTIVE" ? "badge-a" : "badge-r";
+          rowsHtml += "<tr>"
+            + "<td>" + (i+1) + "</td>"
+            + "<td><strong>" + d.full_name + "</strong></td>"
+            + '<td style="font-size:9px;color:#6b7280;font-family:monospace">' + d.account_key + "</td>"
+            + "<td>" + (d.phone || "&mdash;") + "</td>"
+            + "<td>" + (d.disbursement_date || "&mdash;") + "</td>"
+            + '<td style="text-align:right">' + Number(d.loan_amount).toLocaleString() + "</td>"
+            + '<td><span class="badge ' + badgeCls + '">' + d.status + "</span></td>"
+            + "<td>" + daysCell + "</td>"
+            + "</tr>";
+        });
+
+        const css = "* {box-sizing:border-box;margin:0;padding:0;}"
+          + "body{font-family:Arial,sans-serif;font-size:11px;}"
+          + ".rh{background:#1a1a4e;color:white;padding:14px 20px;display:flex;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact;}"
+          + ".rh h1{font-size:14px;} .rh p{font-size:10px;opacity:.75;margin-top:2px;} .meta{font-size:10px;opacity:.8;text-align:right;}"
+          + ".sb{display:flex;border-bottom:2px solid #1a1a4e;}"
+          + ".si{flex:1;padding:8px 10px;border-right:1px solid #e5e7eb;text-align:center;}"
+          + ".si:last-child{border-right:none;}"
+          + ".si .lb{font-size:9px;color:#888;text-transform:uppercase;} .si .vl{font-size:15px;font-weight:800;color:#1a1a4e;}"
+          + "table{width:100%;border-collapse:collapse;}"
+          + "thead th{background:#1a1a4e;color:white;padding:7px 8px;font-size:9px;text-transform:uppercase;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact;}"
+          + "tbody tr:nth-child(even){background:#f8f9ff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}"
+          + "tbody td{padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:10px;}"
+          + ".badge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}"
+          + ".badge-a{background:#d1fae5;color:#065f46;} .badge-r{background:#fee2e2;color:#991b1b;}"
+          + ".days-critical{color:#dc2626;font-weight:700;} .days-high{color:#d97706;font-weight:700;} .days-medium{color:#2563eb;} .days-low{color:#16a34a;}"
+          + ".ft{text-align:center;font-size:9px;color:#9ca3af;padding:8px;border-top:1px solid #e5e7eb;margin-top:6px;}"
+          + "@page{margin:10mm;size:A4 landscape;}";
+
+        const html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Loan Report</title><style>" + css + "<\/style><\/head><body>"
+          + '<div class="rh"><div><h1>Loan Portfolio Status Report</h1><p>Filter: ' + filterLabel + " | " + rows.length + " customers</p></div>"
+          + '<div class="meta">Generated: ' + date + "<\/div><\/div>"
+          + '<div class="sb">'
+          + '<div class="si"><div class="lb">Total</div><div class="vl">' + summary.total + "<\/div><\/div>"
+          + '<div class="si"><div class="lb">Active</div><div class="vl" style="color:#065f46">' + summary.active + "<\/div><\/div>"
+          + '<div class="si"><div class="lb">Arrears</div><div class="vl" style="color:#991b1b">' + summary.arrears + "<\/div><\/div>"
+          + '<div class="si"><div class="lb">Arrears Rate</div><div class="vl">' + summary.arrears_rate + "%<\/div><\/div>"
+          + '<div class="si"><div class="lb">Avg Days Overdue</div><div class="vl">' + summary.avg_days_overdue + "<\/div><\/div>"
+          + "<\/div>"
+          + "<table><thead><tr><th>#</th><th>Customer Name</th><th>Account No</th><th>Phone</th><th>Loan Date</th><th>Loan Amount (ETB)</th><th>Status</th><th>Days Overdue</th></tr></thead>"
+          + "<tbody>" + rowsHtml + "<\/tbody><\/table>"
+          + '<div class="ft">Loan Portfolio Report &bull; ' + date + " &bull; " + rows.length + " records<\/div>"
+          + "<\/body><\/html>";
+
+        const pw = window.open("", "_blank");
+        pw.document.write(html);
+        pw.document.close();
+        pw.focus();
+        setTimeout(function() { pw.print(); }, 600);
+      }
+    </script>
+  </body>
+</html>
